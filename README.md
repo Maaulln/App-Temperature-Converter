@@ -1,200 +1,80 @@
 # Temperature Converter - Flutter App
 
-## Identitas
+Aplikasi konversi suhu untuk 4 satuan: Celsius, Fahrenheit, Kelvin, dan Reamur.
 
-|                 |                                         |
-| --------------- | --------------------------------------- |
-| **Nama**        | Maulana Chandra Irawan                  |
-| **NRP**         | 3124521038                              |
-| **Mata Kuliah** | Workshop Pemrograman Perangkat Bergerak |
+## Fitur
 
----
+- Input nilai suhu
+- Pilih satuan asal dan tujuan
+- Tombol swap satuan
+- Konversi suhu dengan hasil terformat
+- Validasi input angka tidak valid
 
-## Deskripsi Aplikasi
+## Arsitektur (BLoC)
 
-Aplikasi konversi suhu yang dapat mengkonversi nilai suhu antar 4 satuan: **Celsius**, **Fahrenheit**, **Kelvin**, dan **Reamur**.
+Refactor sudah dipindah dari `setState` ke arsitektur event-driven menggunakan `flutter_bloc`.
 
----
+Layer utama:
 
-## Fitur Aplikasi
+- `presentation`: halaman UI, widget, dan BLoC
+- `domain`: entitas (`TemperatureUnit`) dan use case (`ConvertTemperatureUseCase`)
 
-1. **Input Suhu** - Memasukkan nilai suhu yang akan dikonversi
-2. **Pilih Satuan** - Memilih satuan asal dan tujuan dari dropdown
-3. **Tombol Swap** - Menukar satuan asal dan tujuan dengan satu klik
-4. **Tombol Konversi** - Menghitung dan menampilkan hasil
-5. **Validasi Input** - Menampilkan pesan error jika input tidak valid
+Alur state:
 
----
-
-## Screenshot Aplikasi
-
-|              Default               |         Hasil Konversi         |
-| :--------------------------------: | :----------------------------: |
-| ![Default](img/default.png) | ![Hasil](img/result.png) |
-
----
-
-## Implementasi Kode
-
-### 1. Enum TemperatureUnit
-
-```dart
-enum TemperatureUnit {
-  celsius,
-  fahrenheit,
-  kelvin,
-  reamur;
-
-  String get symbol {
-    return switch (this) {
-      TemperatureUnit.celsius => '°C',
-      TemperatureUnit.fahrenheit => '°F',
-      TemperatureUnit.kelvin => 'K',
-      TemperatureUnit.reamur => '°R',
-    };
-  }
-
-  String get displayName {
-    return switch (this) {
-      TemperatureUnit.celsius => 'Celsius',
-      TemperatureUnit.fahrenheit => 'Fahrenheit',
-      TemperatureUnit.kelvin => 'Kelvin',
-      TemperatureUnit.reamur => 'Reamur',
-    };
-  }
-}
-```
-
-### 2. Fungsi Konversi Suhu
-
-```dart
-class TemperatureConverter {
-  static double convert(double value, TemperatureUnit from, TemperatureUnit to) {
-    if (from == to) return value;
-    double celsius = _toCelsius(value, from);
-    return _fromCelsius(celsius, to);
-  }
-
-  static double _toCelsius(double value, TemperatureUnit unit) {
-    return switch (unit) {
-      TemperatureUnit.celsius => value,
-      TemperatureUnit.fahrenheit => (value - 32) * 5 / 9,
-      TemperatureUnit.kelvin => value - 273.15,
-      TemperatureUnit.reamur => value * 5 / 4,
-    };
-  }
-
-  static double _fromCelsius(double celsius, TemperatureUnit unit) {
-    return switch (unit) {
-      TemperatureUnit.celsius => celsius,
-      TemperatureUnit.fahrenheit => (celsius * 9 / 5) + 32,
-      TemperatureUnit.kelvin => celsius + 273.15,
-      TemperatureUnit.reamur => celsius * 4 / 5,
-    };
-  }
-}
-```
-
-### 3. Widget Dropdown Satuan
-
-```dart
-class _UnitDropdown extends StatelessWidget {
-  const _UnitDropdown({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final TemperatureUnit value;
-  final ValueChanged<TemperatureUnit> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<TemperatureUnit>(
-          value: value,
-          items: TemperatureUnit.values
-              .map((unit) => DropdownMenuItem(
-                    value: unit,
-                    child: Text(unit.displayName),
-                  ))
-              .toList(),
-          onChanged: (unit) {
-            if (unit != null) onChanged(unit);
-          },
-        ),
-      ],
-    );
-  }
-}
-```
-
-### 4. Fungsi Swap Satuan
-
-```dart
-void _swapUnits() {
-  setState(() {
-    final temp = _fromUnit;
-    _fromUnit = _toUnit;
-    _toUnit = temp;
-  });
-}
-```
-
----
-
-## Rumus Konversi
-
-| Dari       | Ke Celsius | Rumus          |
-| ---------- | ---------- | -------------- |
-| Celsius    | -          | C              |
-| Fahrenheit | °C         | (F - 32) × 5/9 |
-| Kelvin     | °C         | K - 273.15     |
-| Reamur     | °C         | R × 5/4        |
-
-| Dari Celsius | Ke         | Rumus          |
-| ------------ | ---------- | -------------- |
-| -            | Celsius    | C              |
-| °C           | Fahrenheit | (C × 9/5) + 32 |
-| °C           | Kelvin     | C + 273.15     |
-| °C           | Reamur     | C × 4/5        |
-
----
+1. UI mengirim event (`TemperatureInputChanged`, `FromUnitChanged`, `ToUnitChanged`, `SwapUnitsRequested`, `ConvertRequested`).
+2. `TemperatureConverterBloc` memproses event, validasi input, lalu memanggil use case domain.
+3. UI render ulang berdasarkan state immutable (`TemperatureConverterState`).
 
 ## Struktur Proyek
 
-```
+```text
 temperatureconverter/
 ├── lib/
-│   ├── main.dart                      # Entry point aplikasi
-│   ├── my_app.dart                    # Widget utama dan UI
-│   └── utils/
-│       └── temperature_converter.dart # Logika konversi suhu
-├── pubspec.yaml                       # Dependencies
-└── ...
+│   ├── main.dart
+│   ├── my_app.dart
+│   ├── domain/
+│   │   ├── entities/
+│   │   │   └── temperature_unit.dart
+│   │   └── usecases/
+│   │       └── convert_temperature_usecase.dart
+│   └── presentation/
+│       ├── bloc/
+│       │   ├── temperature_converter_bloc.dart
+│       │   ├── temperature_converter_event.dart
+│       │   └── temperature_converter_state.dart
+│       ├── pages/
+│       │   └── temperature_converter_page.dart
+│       └── widgets/
+│           └── unit_dropdown.dart
+└── test/
+    ├── bloc/
+    │   └── temperature_converter_bloc_test.dart
+    ├── domain/
+    │   └── convert_temperature_usecase_test.dart
+    ├── presentation/
+    │   └── temperature_converter_page_test.dart
+    └── widget_test.dart
 ```
 
----
+## Menjalankan Aplikasi
 
-## Cara Menjalankan Aplikasi
+```bash
+flutter pub get
+flutter run
+```
 
-1. Pastikan Flutter SDK sudah terinstall
-2. Clone repository ini
-3. Jalankan perintah:
-   ```bash
-   flutter pub get
-   flutter run
-   ```
+## Menjalankan Quality Check
 
----
+```bash
+flutter analyze
+flutter test
+```
 
-## Teknologi yang Digunakan
+## Teknologi
 
-- **Flutter** - Framework UI cross-platform
-- **Dart** - Bahasa pemrograman
-- **Material Design 3** - Design system
+- Flutter
+- Dart
+- flutter_bloc
+- bloc
+- equatable
+- bloc_test
